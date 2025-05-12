@@ -1,0 +1,320 @@
+---
+title: "EP02-equipo-6"
+author: "Gabriel Cabrera, Thomas Gustafsson, Vicente Rojas"
+date: "2025-03-27"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include = FALSE}
+#librerías 
+if(!requireNamespace('dplyr',quietly = TRUE)) {
+  install.packages('dplyr')
+}
+library('dplyr')
+
+if(!requireNamespace('tidyr',quietly = TRUE)) {
+  install.packages('tidyr')
+}
+library('tidyr')
+
+if(!requireNamespace('plotly',quietly = TRUE)) {
+  install.packages('plotly')
+}
+library('plotly')
+
+if(!requireNamespace('BSDA',quietly = TRUE)) {
+  install.packages('BSDA')
+}
+library('BSDA')
+
+if(!requireNamespace('ggpubr',quietly = TRUE)) {
+  install.packages('ggpubr')
+}
+library('ggpubr')
+```
+
+<h2>Lectura del archivo csv:</h2>
+
+```{r}
+data = read.csv2("EP02 Datos(1).csv")
+```
+
+<br></br>
+
+<h2>PREGUNTA 1:</h2>
+
+<h5>El Comité Olímpico cree que el mejor tiempo medio de los atletas de
+raza blanca antes de ingresar al programa de entrenamiento era 16,2
+segundos. ¿Soportan los datos esta afirmación?</h5>
+
+Hipótesis nula y alternativa: Ho: El mejor tiempo promedio de los
+atletas de raza blanca, previa al programa de entrenamiento es diferente
+a 16,2 segundos. Ha: El mejor tiempo medio de los atletas de raza blanca
+antes del programa de entrenamiento era de 16,2 segundos.
+
+Se utilizará la prueba T DE STUDENT y un nivel de confianza igual a
+0.05. El uso de esta prueba es porque la cantidad de observaciones son
+menores a 30, ya que es un requisito para utilizar en la prueba Z y por
+ende se descarta, y además no conocemos la desviación estandar.
+
+Además se cúmplen las condiciones para utilizar la prueba T DE STUDENT,
+estos son: 1. Los tiempos de los atletas de raza blanca son
+independientes. 2. Provienen de una población normalmente distribuida.
+
+```{r}
+#Filtramos los datos
+blancos <- data[data$Raza == "Blanca",]
+
+# Gráfica QQ-plot
+g <- ggqqplot(data = data.frame(blancos),
+              x = "Previo",
+              color = "steelblue",
+              xlab = "", ylab = "Tiempos",
+              title = "Gráfico Q-Q Atletas de raza blanca v/s Tiempos")
+print(g)
+
+```
+
+```{r}
+# Prueba de normalidad de Shapiro-Wilk
+shapiro.test(blancos$Previo)
+
+#Comparar la media de la muestra con los 16,2 segundos.
+prueba <- t.test(blancos$Previo, mu = 16.2, alternative = "two.sided")
+print(prueba)
+```
+
+<h3>RESPUESTA 1:</h3>
+
+<h5>Teniendo en cuenta la gráfica y su semejanza a una distribución
+normal y que el valor del p-value es mayor al nivel de confianza,
+podemos concluir de que no se rechaza la hipotesis nula. Por ende, el
+mejor tiempo promedio de los atletas de raza blanca, previa al programa
+de entrenamiento es diferente a 16,2 segundos.</h5>
+
+<br></br>
+
+<h2>PREGUNTA 2:</h2>
+
+<h5>¿Sugieren los datos que la mejor marca de los atletas de raza
+oriental se reduce en promedio 4,7 segundos tras el entrenamiento?</h5>
+
+```{r}
+
+atl_oriental <- data %>% filter(Raza == "Oriental")
+
+n = count(atl_oriental)
+
+# Diferencia en los tiempos antes y después del entrenamiento
+atl_oriental <- atl_oriental %>% mutate(Diferencia = Previo - Posterior)
+
+```
+
+Para contestar la pregunta primero debemos analizar la muestra y ver las
+condiciones que cumple, de este modo, sabremos que tipo de prueba se
+puede realizar: 1. Las observaciones son independientes, la elección de
+la muestra no influye con la selección de otras 2. Las observaciones
+provienen de una distribución normal 3. Se tiene 27 observaciones de la
+muestra
+
+A continuación verificamos si se cumple el punto 2.
+
+```{r}
+
+g2 <- ggqqplot(data = data.frame(atl_oriental), x = "Diferencia",
+                                color = "steelblue",
+                                xlab = "", ylab = "Tiempos",
+                                title = "Gráfico Q-Q atletas raza oriental v/s Tiempos previos")
+print(g2)
+
+# Prueba de normalidad de Shapiro-Wilk
+shapiro.test(atl_oriental$Diferencia)
+
+```
+
+Se utilizo la prueba de shapiro wilk, la cual indica que el valor p \>=
+0.05, por lo cual los datos siguen una distribución normal. Además,
+observando el gráfico Q-Q este indica que si siguen una distribuición
+normal.
+
+Dadas las condiciones anteriores que se cumplen, podemos hacer uso de la
+prueba T de Student para una muestra, utilizando un nivel de confianza
+igual a 0.05.
+
+Hipotesis nula, H0: Los datos sugieren que la mejor marca de los atletas
+de raza oriental se reduce en promedio 4.7 segundos tras el
+entrenamiento, por lo tanto, u_entrenamiento = 4.7
+
+Hipótesis alternativa, HA: la reducción de la mejor marca de los atletas
+de raza oriental tras el entrenamiento es diferente de 4.7 segundos, por
+lo tanto, u_entrenamiento =/= 4.7
+
+Se utiliza una prueba bilateral o de dos colas, debido a que se tiene
+que verificar si la reducción del tiempo es distinta, no solo si es
+mayor o menor.
+
+```{r}
+
+prueba2 <- t.test(atl_oriental$Diferencia, mu = 4.7, alternative = "two.sided", conf.level = 1-0.025)
+
+print(prueba2)
+```
+
+<h3>RESPUESTA 2:</h3>
+
+<h5>Luego de la realización de la prueba t student, el valor p =
+0.0003227, por lo que se tiene que p \< 0.05, indicando que rechazamos
+la hipótesis nula. Esto significa que la mejora promedio en los tiempos
+de los atletas orientales es diferente de 4.7 segundos. Sin embargo,
+como la media muestral entregada por la prueba t de student es mayor que
+4.7, se puede concluir que la mejora en los tiempos es mayor a la
+esperada.</h5>
+
+<br></br>
+
+<h2>PREGUNTA 3:</h2>
+
+<h5>¿Es posible afirmar que, en promedio, los atletas de raza negra
+superan a los de raza blanca por menos de 1 segundo después del
+entrenamiento?</h5>
+
+<h3>RESPUESTA 3:</h3>
+
+<h5>
+
+Para responder la pregunta utlizamos el metodo de t student para 2
+muestras independientes ya que corresponden a atletas de razas distintas
+y cuyos resultados no inciden en el tiempo de los otros.
+
+Antes de aplicar esta prueba se debe cumplir la condicion de que cada
+muestra cumple con una distribucion que tiende a ser normal, para esto
+aplicamos el test "shapiro.test", este nos dira si esta condicion se
+cumple.
+
+</h5>
+
+```{r}
+
+atleta_negro <- data[data$Raza == "Negra", ]  
+atleta_blanco <- data[data$Raza == "Blanca", ]  
+
+atleta_negro_posterior <- atleta_negro$Posterior
+atleta_blanco_posterior <- atleta_blanco$Posterior
+
+normalidad_negro <- shapiro.test(atleta_negro_posterior)
+normalidad_blanco <- shapiro.test(atleta_blanco_posterior)
+
+print(normalidad_blanco)
+print(normalidad_negro)
+
+
+```
+
+<h5>
+
+Dado a que el p-valor es un valor que esta definido dentro de la
+tolerancia , esto nos indica que ambas muestras corresponden a una
+distribucion normal, por lo que se cumplen los requisitos para aplicar
+el test, t-student para 2 muestras independientes
+
+ahora definimos las siguientes hipotesis
+
+Ho : la diferencia de las medias de los atletas blancos posterior al
+entrenamiento sobre la media de los atletas negros posterior a los
+entrenamientos es mayor o igual a 1 segundo
+
+Ha : la diferencia de las medias de los atletas blancos posterior al
+entrenamiento sobre la media de los atletas negros posterior a los
+entrenamientos es menor a 1 segundo
+
+H0​:μB​−μN​≥1
+
+HA​:μB​−μN​\<1
+
+ahora vamos a comprabar nuestras hipotesis segun el test t-student
+aplicando la siguiente configuracion :
+
+</h5>
+
+```{r}
+
+
+t_test_resultado <- t.test(atleta_blanco_posterior, atleta_negro_posterior, alternative = "greater", mu = 1, var.equal = TRUE)
+
+print (t_test_resultado)
+
+```
+
+<h5>
+
+El resultado del test nos arroja que la hipotesis alternativa planteada
+se acepta como verdadera con un porcentaje de confieanza mayor al 95%.
+
+Dado a los datos presentados podemos afirmar que en promedio los tiempos
+de los atletas de raza negra posterior a las sesiones de entrenamiento,
+superan en promedio a los tiempos de los atletas de raza blanca por
+menos de 1 segundo
+
+</h5>
+
+<br></br>
+
+<h2>PREGUNTA 4:</h2>
+
+<h5>¿Será cierto que hay menos atletas de raza blanca que redujeron sus
+mejores marcas en al menos 3,5 segundos que atletas de raza negra que lo
+hicieron en al menos 1,4 segundos?</h5>
+
+Para contestar la pregunta realizaremos el método de Wilson para la diferencia entre dos proporciones, dado que se cumplen todas las condiciones necesarias para su uso: 1. Las muestras son independientes entre si. 2. Las observaciones cumplen con la necesidad de exito-fracaso, donde se encuentra dado por si cummple la condición de reducción de tiempo o no.
+
+Generamos la hipótesis para el problema
+
+Hipótesis nula H0: no hay diferencia en las proporciones de atletas blancos y negros que lograron reducir los tiempos según las condiciones establecidas, por lo tanto, p1 - p2 = 0
+
+Hipótesis alternativa HA: hay diferencia en las proporciones de reducción de tiempo entre los dos grupos de atletas, por lo tanto, p1 - p2 != 0
+
+
+```{r}
+atl_blanca <- data %>% filter(Raza == "Blanca")
+
+atl_negra <- data %>% filter(Raza == "Negra")
+
+conf_alfa <- 0.05
+
+atl_blanca <- atl_blanca %>%
+  mutate(Diferencia = Previo - Posterior)
+
+atl_negra <- atl_negra %>%
+  mutate(Diferencia = Previo - Posterior)
+
+#Cantidad total de atletas en cada grupo
+total_blanca <- nrow(atl_blanca)
+total_negra <- nrow(atl_negra)
+
+#Creación de tabla con los atletas que cumplen la condicion establecida
+exito_blanca <- atl_blanca %>% filter(Diferencia >= 3.5)
+exito_negra <- atl_negra %>% filter(Diferencia >= 1.4)
+
+#Cantidad total de atletas en cada grupo que cumple con las condiciones
+cumple_blanca <- nrow(exito_blanca)
+cumple_negra <- nrow(exito_negra)
+
+resultado <- prop.test(c(cumple_blanca, cumple_negra),
+                       c(total_blanca, total_negra),
+                       alternative = "two.sided",
+                       conf.level = 1-conf_alfa)
+
+print(resultado)
+
+```
+
+<h3>RESPUESTA 4:</h3>
+
+<h5>Según los valores obtenidos luego de la realización del método de wilson para la diferencia de dos proporciones, tenemos que el valor p = 0.00172, lo cual indica que p<0.05 significativamente.Además, la proporción de atletas blancos que cumplieron con la condición de 3.5 segundos corresponde al 15.38%, mientras que la cantidad de atletas negros que cumplieron fue del 60.71% (p1 = 0.1538, p2=0.6071).También el método nos entrega el intervalo de confianza [-0.7183261, -0.1882673], dado que es un intervalo negativo, se puede confirmar que la proporción de atletas negros que cumplen con la condición es mayor que la de los atletas blancos.
+
+Debido a todo lo anteriormente mencionado, se rechaza la hipótesis nula concluyendo que las proporciones obtenidas no son iguales y que si existe una diferencia significativa en las proporciones entre los dos grupos de atletas.</h5>
+
+<br></br>

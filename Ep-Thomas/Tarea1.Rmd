@@ -1,0 +1,97 @@
+---
+title: "EP01-equipo-9"
+author: "Gabriel Cabrera, Thomas Gustafsson, Vicente Rojas"
+date: "2025-03-20"
+output: html_document
+
+---
+
+```{r, include = FALSE}
+#librerías 
+if(!requireNamespace('dplyr',quietly = TRUE)) {
+  install.packages('dplyr')
+}
+library('dplyr')
+
+if(!requireNamespace('tidyr',quietly = TRUE)) {
+  install.packages('tidyr')
+}
+library('tidyr')
+
+if(!requireNamespace('plotly',quietly = TRUE)) {
+  install.packages('plotly')
+}
+library('plotly')
+
+if(!requireNamespace('BSDA',quietly = TRUE)) {
+  install.packages('BSDA')
+}
+library('BSDA')
+```
+<h2>PREGUNTA:</h2>
+<h3>El nivel de ingresos de las mujeres de la RM ¿Varía con el estado civil?</h3>
+<h5>Teniendo en cuenta el objetivo de la pregunta, los datos que nos servirán son: región, sexo, ecivil (variables categóricas nominales) e ytot (variable numérica discreta).</h5>
+<h5>A causa del tipo de variables que son región, sexo, ecivil e ytot, y de que además queremos ver de forma independiente si es que el ingreso es afectado para cada grupo de mujeres con un estado civil diferente, la mejor gráfica a utilizar, basándonos en los apuntes del libro, es el gráfico de caja.</h5>
+
+<br></br>
+<h2>Lectura de archivo y obtención de las variables necesarias</h2>
+```{r}
+
+# Lectura del archivo csv
+data = read.csv2("EP01 Datos Casen 2017.csv")
+
+M_RM <- data |> 
+  filter(sexo == "Mujer" & region == "Región Metropolitana de Santiago") |> 
+  select(ecivil, ytot)  # Solo necesitamos estas columnas
+
+# Función para eliminar valores atípicos con IQR
+eliminar_outliers <- function(df, columna) {
+  Q1 <- quantile(df[[columna]], 0.25, na.rm = TRUE)
+  Q3 <- quantile(df[[columna]], 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR
+  upper_bound <- Q3 + 1.5 * IQR
+  df |> filter(df[[columna]] >= lower_bound & df[[columna]] <= upper_bound)
+}
+
+# Aplicamos la función de eliminación de outliers a cada grupo de estado civil
+M_RM_filtrado <- M_RM |> 
+  group_by(ecivil) |> 
+  group_split() |> 
+  lapply(function(df) eliminar_outliers(df, "ytot")) |> 
+  bind_rows()
+
+```
+
+<br></br>
+<h2>Creación de gráfico combinando todos los estados civiles</h2>
+```{r}
+
+niveles_ecivil <- unique(M_RM_filtrado$ecivil)
+fig <- plot_ly()
+
+for (estado in niveles_ecivil) {
+  estado_filtrado <- M_RM_filtrado |> filter(ecivil == estado)
+  
+  fig <- fig |> add_trace(
+    y = estado_filtrado$ytot,
+    type = "box",
+    name = estado
+  )
+}
+
+fig <- fig |> layout(
+  title = "Distribución del ingreso total por estado civil",
+  yaxis = list(title = "Ingreso total"),
+  xaxis = list(title = "Estado civil")
+)
+
+fig
+
+```
+<br></br>
+<h2>Respuesta:</h2>
+<h5>El gráfico de cajas muestra la distribución de ingresos totales de mujeres en la Región Metropolitana según su estado civil.
+Este gráfico permite realizar un primer alcance a la siguiente pregunta "El nivel de ingresos de las muejres de la RM ¿Varía con el estado civil?". Mediante la observación de cada una de las cajas, se puede ver que existen diferencias en la distribución de ingresos entre los distintos estados civiles, en especial si nos fijamos en la media de cada uno de estos, que varía desde los 200k hasta los 400k aproximadamente, dando así a entender de que realmente existe una variación del ingreso de las mujeres de RM a causa de su estado civil.</h5>
+
+<br></br>

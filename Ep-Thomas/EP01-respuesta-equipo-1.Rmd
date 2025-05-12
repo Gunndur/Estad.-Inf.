@@ -1,0 +1,70 @@
+---
+title: "Tarea 1"
+author: "Vicente Aninat - Juan Pablo Loyola - Rodrigo González"
+date: "2025-03-20"
+output: html_document
+---
+
+```{r}
+# Configuración para evitar la visualización de numeros en notación 
+# cientifica
+options(scipen = 999)
+
+# Instalación y llamado de los packages
+if(!requireNamespace('dplyr', quietly = TRUE)){
+  install.packages('dplyr')
+}
+library(dplyr)
+if(!requireNamespace('ggplot2', quietly = TRUE)){
+  install.packages('ggplot2')
+}
+library(ggplot2)
+```
+
+A partir de una tabla que comprende los resultados de la encuesta CASEN del año 2017, se requiere responder a la siguiente pregunta.
+
+# ¿Se encuestaron más o menos la misma cantidad de gente en cada provincia de la RM?
+
+Para esto se decidió por, a partir de la lectura del archivo, ordenar los datos segun la provincia y luego contar la cantidad de personas encuestadas en cada una, entonces con la cantidad de personas por provincia se encuentra la desviación estandar y la media aritmetica para concluir en base al coeficiente de variacion que tal alta era la separación entre las cantidades de personas encuestadas. Siendo que si el coeficiente de variación es menor al 30% entonces la separación es baja, entre 30% y 100% la separación es moderada y mayor a 100% significa una separación alta entre las cantidades.
+
+## Lectura del archivo
+```{r}
+datosCasen <- read.csv2("EP01 Datos Casen 2017.csv", header = TRUE)
+```
+
+## Ordenamiento y conteo según provincia
+```{r}
+# Ordenamiento
+datosOrdenProvincia <- datosCasen %>% arrange(provincia)
+# Conteo
+datosProvincia <- datosOrdenProvincia %>% count(provincia)
+```
+
+## Calculo de las medidas estadísticas
+```{r}
+# Media de las personas encuestadas por provincia
+mediaDatosProvincia = mean(datosProvincia$n)
+print (paste("Media de personas encuestadas =", mediaDatosProvincia))
+
+# Desviación estándar de la cantidad de personas encuestadas por provincia
+desviacion_valor = as.integer(sd(datosProvincia$n))
+print (paste("Desviación estándar =", desviacion_valor))
+
+# Rango de los datos
+rango = max(datosProvincia$n) - min(datosProvincia$n)
+print (paste("Rango =", rango))
+
+# Coeficiente de variación de los datos
+coefVariacion = desviacion_valor/mediaDatosProvincia * 100
+print (paste("Coeficiente de variación =", coefVariacion, "%"))
+```
+
+## Gráfica de los datos
+```{r}
+ggplot(datosProvincia, aes(x = provincia, y = n)) + 
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  labs(title = "Cantidad de personas encuestadas por provincia", x = "Provincia", y = "Cantidad")
+```
+
+# Conclusión
+En base al gráfico y el valor del coeficiente de variación, se concluye que las cantidades de personas encuestadas difiere demasiado como para ser consideradas similares.

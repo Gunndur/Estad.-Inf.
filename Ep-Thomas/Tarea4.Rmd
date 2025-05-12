@@ -1,0 +1,239 @@
+---
+title: "EP04-respuesta-equipo-1"
+date: "2025-04-11"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include = FALSE}
+#librerías 
+if(!requireNamespace('dplyr',quietly = TRUE)) {
+  install.packages('dplyr')
+}
+library('dplyr')
+
+if(!requireNamespace('tidyr',quietly = TRUE)) {
+  install.packages('tidyr')
+}
+library('tidyr')
+
+if(!requireNamespace('plotly',quietly = TRUE)) {
+  install.packages('plotly')
+}
+library('plotly')
+
+if(!requireNamespace('ggpubr',quietly = TRUE)) {
+  install.packages('ggpubr')
+}
+library('ggpubr')
+
+if (!requireNamespace('ggplot2',quietly = TRUE)) {
+  install.packages('ggplot2')
+}
+library('ggplot2')
+
+if(!requireNamespace('pwr',quietly = TRUE)) {
+  install.packages('pwr')
+}
+library('pwr')
+
+if (!require(exact2x2)) {
+  install.packages("exact2x2")
+}
+library(exact2x2)
+```
+
+```{r}
+# Lectura del archivo csv
+data = read.csv2("EP04 Datos.csv")
+```
+
+<h2>Pregunta 1:</h2>
+<h4>Una agencia de marketing desea determinar si hay una diferencia significativa en la efectividad de tres estrategias publicitarias utilizadas para promocionar un nuevo producto. Para ello, se ha recopilado información de personas que fueron expuestas a las tres estrategias publicitarias, registrando si mostraron una aceptación (A) o rechazo (R) a cada una de ellas.
+¿Qué puede concluir la agencia de marketing sobre la efectividad de las estrategias publicitarias para promover el nuevo producto?
+Indicación: obtenga la muestra de 50 personas a partir del archivo “EP04 Datos.csv” que se encuentra en el directorio compartido, usando la semilla 102. Considere un nivel de significación α=0,05.</h4>
+
+<h5>Se busca concluir sobre la efectividad de las estrategias publicitarias, lo cual se puede analizar mediante la proporción de aceptación y rechazo entre cada estrategia, además se presentan 2 variables categóricas:
+
+1) Aceptación de la estrategia, esta siendo dicotómica
+
+2) Estrategia aplicada: siendo de mas de 2 niveles
+
+Además no son pruebas pareadas.
+
+De la información anterior se desprende que la prueba a utilizar es la prueba de chi cuadrado de homogeneidad para detectar diferencias entre las proporciones de aceptación y rechazo de cada estrategia
+Hipótesis:
+
+H0=La proporción de aceptación son iguales en cada estrategia (igual efectividad)
+
+Ha=La proporción de aceptación son distintas en cada estrategia
+
+Antes de aplicar la prueba se debe ver si se puede usar de manera confiable:
+
+1) las observaciones fueron tomadas al azar desde la población, además no cubren el 10% de esta, por lo tanto, se puede concluir que son observaciones independientes
+
+Para verificar que hay mínimo 5 muestras esperadas se hará una tabla de contingencia
+</h5>
+```{r}
+set.seed(102)
+#generacion de la muestra
+muestra<- data %>% sample_n(size=50,replace=FALSE)
+#calculo de frecuencias
+e1a<-sum(muestra$estrategia_1=="A")
+e1r<-sum(muestra$estrategia_1=="R")
+e2a<-sum(muestra$estrategia_2=="A")
+e2r<-sum(muestra$estrategia_2=="R")
+e3a<-sum(muestra$estrategia_3=="A")
+e3r<-sum(muestra$estrategia_3=="R")
+#creacion de la tabla de contingencia
+acepto<-c(e1a,e2a,e3a)
+rechazo<-c(e1r,e2r,e3r)
+table<-as.table(rbind(acepto,rechazo))
+dimnames(table)<-list(Aceptacion = c("Acepto","Rechazo"),Estrategia=c("Estrategia 1","Estrategia 2","Estrategia 3"))
+print(table)
+```
+<h5>
+2) De la tabla anterior se puede ver que en todas las observaciones se encuentran al menos 5 observaciones, además se calcularan las frecuencias esperadas
+</h5>
+```{r}
+suma_filas<-apply(table,1,sum)
+suma_col<-apply(table,2,sum)
+suma_total<-sum(table)
+esperadas<-outer(suma_filas,suma_col,"*")/suma_total
+esperadas<- round(esperadas,1)
+dimnames(esperadas)<-list(Aceptacion = c("Acepto","Rechazo"),Estrategia=c("Estrategia 1","Estrategia 2","Estrategia 3"))
+print(esperadas)
+```
+<h5>También las frecuencias esperadas poseen sobre 5 observaciones, se procede a aplicar la prueba chi cuadrado de homogeneidad</h5>
+```{r}
+prueba<-chisq.test(table)
+print(prueba)
+
+```
+<h3>Conclusión:</h3>
+<h5>Comparando el p-value obtenido con el nivel de significancia, se puede ver que este es mayor que 0.05, concluyendo que no existe evidencia suficiente para rechazar la hipótesis nula en favor de la hipótesis alternativa, por lo tanto, no existe una diferencia significativa en la proporción de la aceptación de cada estrategia publicitaria
+</h5>
+
+<br></br>
+<h2>Pregunta 2:</h2>
+<h4>Una organización de conservación de la fauna silvestre estudia manadas de tres tipos de animales herbívoros en reservas naturales africanas. Se seleccionó aleatoriamente una muestra de 30 observaciones de los animales que se acercaron a beber agua en el principal afluente de las reservas Etosha y Mahago durante tres días consecutivos del mes de febrero. Se registraron 5 elefantes, 10 antílopes y 15 cebras en la primera, y 6 elefantes, 14 antílopes y 10 cebras en la segunda.
+¿Existe evidencia de que la proporción de especies es la misma en ambas reservas?</h4>
+
+<h5>Ya que las observaciones son independientes de entre si y que el tamaño de la muestra es menor al 10% del tamaño de la población, además de que hay un minimo de cinco observaciones en cada grupo. Se decidió usar la prueba de Chi-Cuadrado de Pearson, en especifico, chi-cuadrado de homogenidad, ya que queremos determinar si dos poblaciones (reservas) presentan las mismas proporciones en los diferentes niveles de la variable categórica (especies de animales). De esta forma tenemos, las hipótesis a contrastar son:
+
+Ho: Se evidencia la misma proporciones de especies entre la reserva de Etosha y la de Mahago.
+Ha: Se evidencia proporciones diferentes de especies entre la reserva de Etosha y la de Mahago.
+
+
+</h5>
+```{r}
+# Crear tabla de contingencia
+Etosha = c(5, 10, 15)
+Mahago = c(6, 14, 10)
+tabla = as.table(rbind(Etosha, Mahago))
+dimnames(tabla) = list(reservas = c("Etosha", "Mahago"),
+                       especies = c("elefantes", "antílopes", "cebras"))
+
+# Definir condiciones y nivel de significancia
+min_frec_espereada = 5
+alfa = 0.05
+```
+
+<h4>Tabla de contingensia:</h4>
+```{r}
+print(tabla)
+```
+
+<h4>PRUEBAS GLOBALES:</h4>
+```{r}
+# Obtener las frecuiencias esperadas 
+sum_fil = apply(tabla, 1, sum)
+sum_col = apply(tabla, 2, sum)
+total = sum(tabla)
+esperado = outer(sum_fil, sum_col, "*") / total
+esperado = round(esperado, 1)
+dimnames(esperado) = list(reservas = c("Etosha", "Mahago"),
+                       especies = c("elefantes", "antílopes", "cebras"))
+
+# Realizar prueba de chi-cuadrado de homogeneidad
+chi = chisq.test(tabla)
+```
+
+<h4>Frecuencias esperadas:</h4>
+```{r}
+print(esperado)
+cat("Frecuencias esperado bajo", min_frec_espereada, ":", sum(esperado < min_frec_espereada))
+```
+
+<h4>Resultado de la prueba chi-cuadrado:</h4>
+```{r}
+print(chi)
+```
+<h3>Conclusión:</h3>
+<h5>Ya que p-value es mucho mayor que el nivel de significancia, podemos concluir que se falla al rechazar la hipótesis nula. Es decir, no hay evidencia suficientemente fuerte que sugiera, con 95 % de confianza, que haya proporciones diferentes de especies entre la reserva de Etosha y la de Mahago.</h5>
+
+<br></br>
+<h2>Pregunta 3:</h2>
+<h4>Una organización dedicada a la rehabilitación de villanos ha observado que muchos de ellos ingresan al programa con niveles elevados de hostilidad. Para abordar este problema, decidieron implementar un nuevo programa de bienvenida diseñado para reducir la hostilidad y facilitar la reintegración a la sociedad. Para evaluar la efectividad de este programa, se reclutó a un grupo de 20 villanos a quienes se les midió el nivel de hostilidad (alto o bajo) antes y después de participar en el programa de bienvenida. Los resultados se presentan a continuación:
+2 villanos no mostraron hostilidad ni antes ni después.
+15 villanos que inicialmente mostraban hostilidad dejaron de hacerlo.
+2 villanos mantuvieron un elevado nivel de hostilidad.
+el otro villano desarrolló síntomas de hostilidad tras participar en el programa cuando antes no era hostil.
+¿Qué se puede concluir acerca de la efectividad del nuevo programa de bienvenida para reducir la hostilidad en los villanos?</h4>
+
+<h5> Ya que las observaciones provienen de la misma muestra de villanos evaluada antes y después, y que la variable observada (nivel de hostilidad) es categórica y dicotómica se decidió aplicar la prueba de McNemar. Esta prueba es apropiada para comparar proporciones en datos pareados categóricos, en específico busca determinar si hay un cambio significativo después de una intervención. En este caso, buscamos evidenciar si el nuevo programa de bienvenida tiene un efecto en la reducción de hostilidad, por lo que las hipótesis son:
+
+
+Ho: No hay efecto del programa (la probabilidad de que un villano cambie de hostil a no hostil es igual a la de que cambie de no hostil a hostil).
+
+Ha: Hay un efecto del programa (las probabilidades de cambio no son iguales).
+
+</h5>
+```{r}
+
+tabla <- matrix(c(2, 15, 1, 2), 
+                nrow = 2, 
+                byrow = TRUE,
+                dimnames = list("Antes" = c("Hostil", "No hostil"),
+                                "Después" = c("Hostil", "No hostil")))
+
+mcnemar.exact(tabla)
+
+```
+<h3>Conclusión:</h3>
+<h5> Ya que el valor-p obtenido es significativamente menor al nivel de significancia estándar 0.05 se rechaza la hipótesis nula. Esto indica que hay evidencia suficientemente fuerte con un 95% de confianza, de que el nuevo programa de rehabilitación de villanos tiene un efecto en la reducción de los niveles de hostilidad de estos.
+
+</h5>
+
+<br></br>
+<h2>Pregunta 4:</h2>
+<h4>Durante un apocalipsis zombie, un grupo de 10 mujeres y 14 hombres sobrevivientes se encuentra buscando desesperadamente refugio y encuentran dos edificios abandonados que podrían servir: una escuela y un centro comercial. Algunas personas piensan que la escuela es más segura, mientras que otras consideran que el centro comercial es más seguro. Después de elegir sus opciones, se observa que 6 mujeres y 10 hombres eligen refugiarse en la escuela abandonada mientras que los otros optan por el centro comercial.
+¿Hay relación entre el sexo de la persona y el edificio abandonado que encuentra más seguro?</h4>
+
+<h5> Dado que las observaciones son independientes entre si y que el tamaño de la muestra no supera el 10% de la población total, inicialmente se evaluó usar Chi-Cuadrado de independencia, pero no se cumplia la condición de que cada valor esperado de cada celda fuera como mínimo 5. Por estas razones se usará la prueba exacta de Fisher, que sirve para muestras pequeñas, y que además evaluá si existe una relación significativa entre las variables (sexoy elección de edificio).
+
+Las hipótesis a contrastar son:
+
+Ho: No hay relación entre el sexo de la persona y el edificio que considera más seguro
+Ha: Hay relación entre el sexo de la persona y el edificio que considera más seguro
+</h5>
+```{r}
+
+tabla <- matrix(c(6, 4, 10, 4), nrow = 2, byrow = TRUE)
+colnames(tabla) <- c("Escuela", "CentroComercial")
+rownames(tabla) <- c("Mujeres", "Hombres")
+
+print(tabla)
+
+resultado <- fisher.test(tabla)
+
+print(resultado)
+
+
+
+```
+<h3>Conclusión:</h3>
+<h5> El p-value obtenido de la prueba exacta de Fisher es de 0.6734, valor mayor al nivel de significación usual, que es de 0.05, por lo que se falla al rechazar la hipótesis nula, es decir, no hay evidencia suficientemente fuerte con un 95% de confianza para afirmar que hay una relación entre el sexo de la persona y la elección del edificio abandonado. Por lo que en esta muestra la elección del refugio parece ser independiente del sexo
+</h5>

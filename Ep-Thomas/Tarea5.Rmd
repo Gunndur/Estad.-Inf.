@@ -1,0 +1,167 @@
+---
+title: "EP05-respuesta-equipo-1"
+date: "2025-04-20"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include = FALSE}
+#librerías 
+if(!requireNamespace('DescTools',quietly = TRUE)) {
+  install.packages('DescTools')
+}
+library('DescTools')
+
+if(!requireNamespace('ez',quietly = TRUE)) {
+  install.packages('ez')
+}
+library('ez')
+
+if (!requireNamespace('ggpubr',quietly = TRUE)) {
+  install.packages('ggpubr')
+}
+library('ggpubr')
+
+if(!requireNamespace('tidyverse',quietly = TRUE)) {
+  install.packages('tidyverse')
+}
+library('tidyverse')
+
+if(!requireNamespace('exact2x2',quietly = TRUE)) {
+  install.packages('exact2x2')
+}
+library('exact2x2')
+```
+
+<h2>Contexto:</h2>
+<h4>En una emocionante competencia de cubos Rubik, participantes de Chile, Argentina, Colombia, Uruguay, Perú y Ecuador demostraron su destreza en resolver tres tipos de cubos: 2x2x2, 3x3x3 y Megaminx.
+
+Después del torneo, un grupo de investigadores de la Asociación Mundial del Cubo, interesado en los tiempos que hicieron las jugadoras y los jugadores en la competencia, decidieron estudiar si el país y el tipo de cubo usado en cada prueba tienen influencia en los segundos que se tardan en resolverlos. Para ello usaron una muestra aleatoria de los datos de la competencia, en la cual participaron más de 2.000 personas</h4>
+<h4>
+Las variables presentes en la muestra son las siguientes:
+</h4>
+|Variable| Tipo                  |
+|--------|-----------------------|
+| id     | Cuantitativa Discreta |
+| pais   | Cualitativa Nominal   |
+| tipo   | Cualitativa Nominal   |
+| tiempo | Cuantitativa Continua |
+<br></br>
+<h2>Pregunta:</h2>
+<h4>¿Existen diferencias en el tiempo de resolución de cubos 2x2x2 entre participantes de Chile, Perú y Argentina?</h4>
+
+<br></br>
+<h2>Solución:</h2>
+```{r}
+# Lectura del archivo csv
+data = read.csv2("EP05 Datos.csv")
+```
+
+```{r}
+# Agrupacion de los datos
+tiempos2x2x2<- data %>% filter(tipo=="2x2x2")
+tiempos2x2x2<- tiempos2x2x2 %>% filter(pais=="Chile"|pais=="Perú"|pais=="Argentina")
+tiempos2x2x2[["id"]]<- factor(tiempos2x2x2[["id"]])
+tiempos2x2x2[["pais"]]<- factor(tiempos2x2x2[["pais"]])
+tiempos2x2x2<-tiempos2x2x2%>%select(id,pais,tiempo)
+
+
+datoschile<- tiempos2x2x2 %>% filter(pais=="Chile") %>% select(id,pais,tiempo)
+datosperu<- tiempos2x2x2 %>% filter(pais=="Perú") %>% select(id,pais,tiempo)
+datosargentina<- tiempos2x2x2 %>% filter(pais=="Argentina") %>% select(id,pais,tiempo)
+``` 
+
+<h5>
+Verificando los requerimientos para utilizar ANOVA ómnibus para pruebas independientes:</h5>
+
+<h5>1)La escala con que se mide la variable dependiente tiene las propiedades de una escala de intervalos.</h5>
+<h5>2)Las k muestras son obtenidas de manera aleatoria e independiente desde la poblacion de origen.</h5>
+<h5>3)Se puede suponer razonablemente que la poblacion tiene una distribucion normal.</h5>
+<h5>4)Si las muestras provienen de mas de una poblacion, estas poblaciones tienen la misma parianza.</h5>
+
+<h5>Dentro del contexto de la pregunta, la primera condición se cumple debido a que es una variable continua de datos, además que la diferencia de 2 valores es conocida y constante (diferencia entre 5s y 10s es 5s, al igual que 10s y 15s, etc). Respecto a la aleatoriedad e independencia de las observaciones, esto se afirma en el enunciado: "Para ello usaron una muestra aleatoria de los datos de la competencia". Para concluir sobre la normalidad se puede utilizar los graficos Q-Q.
+</h5>
+
+```{r}
+g<- ggqqplot(tiempos2x2x2,x="tiempo",y="pais", color = "pais", palette=c("red1","cyan1","darkolivegreen"))
+
+# Cada categoria genera un grafico
+g<- g +facet_wrap(~ pais)
+g<- g + rremove("x.ticks") + rremove("x.text")
+g<- g + rremove("y.ticks") + rremove("y.text")
+g<- g + rremove("axis.title")
+print(g)
+```
+
+<h5>Dentro de todo, se puede ver en el gráfico que las muestras de cada pais se acercan bastante a una distribucion normal, con uno que otro dato mas alejado, por lo que se puede concluir que la población de origen sigue una distribución normal y se sigue un nivel de significancia de 0.05.
+</h5>
+
+<br></br>
+<h5>-Shapiro test para Chile</h5>
+```{r}
+shapirochile<-shapiro.test(datoschile$tiempo)
+print(shapirochile)
+```
+<h5>-Shapiro test para Argentina</h5>
+```{r}
+shapiroargentina<-shapiro.test(datosargentina$tiempo)
+print(shapiroargentina)
+```
+<h5>-Shapiro test para Peru</h5>
+```{r}
+shapiroperu<-shapiro.test(datosperu$tiempo)
+print(shapiroperu)
+```
+
+<h5>En todas las instancias del test de shapiro se obtiene un valor mayor a 0.05, por lo cual podemos concluir que efectivamente los datos siguen una distribución normal.</h5>
+
+<br></br>
+<h5>
+Ahora, con respecto a la ultima condición, se debe obtener la varianza de las muestras de cada país.
+</h5>
+
+```{r}
+varia<-aggregate(tiempo~pais,data=tiempos2x2x2,var)
+print(varia$tiempo[3]/varia$tiempo[1])
+```
+<h5>
+Se obtiene un valor de 1.338323, que es menor a 1.5, permitiéndonos ejecutar un test de ANOVA, para determinar que test usar se debe ver el tamaño de las muestras:
+
+```{r}
+table(tiempos2x2x2$pais)
+```
+
+ya que se tienen muestras de diferente tamaño, se debe usar la funcion ezANOVA.
+</h5>
+
+<br></br>
+
+<h5>
+Ya concluido que se puede utilizar el test de ANOVA, se plantean las hipotesis:</h5>
+  <h5>-H0 = No hay diferencia significativa en las medias de los tiempos de solución entre los 3 países.</h5>
+  <h5>-Ha = Existe diferencia significativa en las medias de los tiempos de solución entre los 3 países.</h5>
+Estas hipótesis expresadas matemáticamente:
+  <h5> H0:μChile=μPeru=μArgentina </h5>
+  <h5> Ha: ∃(i,j) tal que μi != μj, con i, j ∈ {Chile, Peru, Argentina}, i != j</h5>
+
+
+```{r}
+pruebaANOVA<-ezANOVA(tiempos2x2x2,dv=tiempo,wid=id,between=pais, return_aov = TRUE)
+print(pruebaANOVA)
+```
+
+<h5>
+Se obtiene un p-value de 2.139484e-35 mucho menor que el alfa = 0.05, lo que nos permite concluir que si existe una diferencia significativa entre las medias  de al menos un par entre los 3 países, para ver en cual país existe esta diferencia se debe usar un procedimiento de Post Hoc, para esto se empleará la prueba HSD de Tukey.
+</h5>
+```{r}
+hsd<-TukeyHSD(pruebaANOVA$aov, "pais",ordered=TRUE)
+print(hsd,digits=15)
+```
+<h3>Conclusión:</h3>
+<h5>
+A través de los resultados de la prueba Tukey se puede observar que para cada par el p-value es mucho
+menor que el nivel de significancia, por lo que cada diferencia es estadísticamente significante. Se puede observar que la mayor diferencia esta entre Argentina y Perú, siendo los Argentinos entre 0.30 y 0.39 segundos más rápidos que los Peruanos, seguidos de Chile y Perú, siendo los Chilenos entre 0.15 y 0.24 segundos más rápidos que los Peruanos, y por último la diferencia entre Argentina y Chile, siendo los Argentinos 0.09 y 0.18 segundos más rápidos que los Chilenos.
+</h5>
+<br></br>

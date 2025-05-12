@@ -1,0 +1,211 @@
+---
+title: "EP03-respuesta-equipo-1"
+date: "2025-04-04"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include = FALSE}
+#librerías 
+if(!requireNamespace('dplyr',quietly = TRUE)) {
+  install.packages('dplyr')
+}
+library('dplyr')
+
+if(!requireNamespace('tidyr',quietly = TRUE)) {
+  install.packages('tidyr')
+}
+library('tidyr')
+
+if(!requireNamespace('plotly',quietly = TRUE)) {
+  install.packages('plotly')
+}
+library('plotly')
+
+if(!requireNamespace('ggpubr',quietly = TRUE)) {
+  install.packages('ggpubr')
+}
+library('ggpubr')
+
+if (!requireNamespace('ggplot2',quietly = TRUE)) {
+  install.packages('ggplot2')
+}
+library('ggplot2')
+
+if(!requireNamespace('pwr',quietly = TRUE)) {
+  install.packages('pwr')
+}
+library('pwr')
+```
+
+<h2>Contexto:</h2>
+<h4>En una planta química hay dos máquinas que envasan detergentes industriales en bidones con un volumen de producto que sigue una distribución normal con desviación estándar de 1 litro. La ingeniera a cargo de la planta debe asegurar que los bidones se están llenando con una media de 10 litros. Pero ella tiene la sospecha de que hay desviaciones en esta media, lo que piensa confirmar usando una muestra aleatoria de 100 envases (50 de cada una de las máquinas). También cree que hay diferencia en el cumplimiento del volumen requerido entre la máquina más antigua y la más moderna, que han de andar por el 90% y 96% de los bidones, respectivamente.</h4>
+
+<br></br>
+<h2>Pregunta 1:</h2>
+<h4>Si la ingeniera piensa rechazar la hipótesis nula cuando la muestra presente una media menor a 9,78 litros o mayor a 10,22 litros, ¿cuál es la probabilidad de que cometa un error de tipo I? Para responder, generen un gráfico de la distribución muestral de las medias hipotetizada en donde se marquen las zonas correspondientes a la probabilidad solicitada, para luego, basándose en este gráfico, calcular el área correspondiente. Tome como ejemplo los scripts presentados en la lectura sobre poder estadístico.</h4>
+
+<h5>Un error de tipo I ocurre cuando se rechaza la hipótesis nula cuando esta es verdadera, la ingeniera piensa rechazar la hipótesis nula cuando la muestra este fuera del intervalo de confianza [9.78,10.22], es decir, cuando la media muestral caiga fuera de ese rango se cometería el error tipo I, para calcular la probabilidad de esto, hay que calcular el área que se encuentra fuera del intervalo de confianza en la curva normal.</h5>
+```{r}
+mu_0 <- 10  # H0
+sigma <- 1  # Desvest
+n <- 50  # Muestra
+errorEstándar <- sigma / sqrt(n)  # Error estándar de la media muestral
+
+# Valores críticos para el rechazo de la hipótesis nula
+limiteInf <- 9.78
+limiteSup <- 10.22
+
+# Eje x
+x <- seq(9, 11, length.out = 1000)
+
+# Distribución normal bajo la suposición de que H0 es verdadera
+y <- dnorm(x, mean = mu_0, sd = errorEstándar)
+
+# Cálculo de las áreas correspondientes a error tipo I
+errorAreaIzq <- pnorm(limiteInf, mean = mu_0, sd = errorEstándar)
+errorAreaDer <- 1 - pnorm(limiteSup, mean = mu_0, sd = errorEstándar)
+errorTipoI <- errorAreaIzq + errorAreaDer
+
+df <- data.frame(x = x, y = y)
+ggplot(df, aes(x, y)) +
+  geom_line(color = "blue", linewidth = 1) +
+  # Áreas que representan el error tipo I
+  geom_area(data = subset(df, x <= limiteInf), aes(x, y), fill = "red", alpha = 0.5) +
+  geom_area(data = subset(df, x >= limiteSup), aes(x, y), fill = "red", alpha = 0.5) +
+  # Líneas que representan los límites
+  geom_vline(xintercept = limiteInf, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = limiteSup, linetype = "dashed", color = "red") +
+  ggtitle("Distribución Muestral bajo H0 y Error Tipo I") +
+  xlab("Media muestral") + ylab("Densidad de probabilidad") +
+  theme_minimal()
+  
+# Mostrar la probabilidad de error tipo I
+cat(sprintf("Probabilidad de error tipo I: %.4f", errorTipoI, errorTipoI * 100))
+```
+<h3>Respuesta:</h3>
+<h5>La probabilidad de cometer un error tipo I es del 0.1198, en otras palabras, hay aproximadamente un 12% de rechazar la hipótesis nula cuando esta es verdadera.</h5>
+
+<br></br>
+<h2>Pregunta 2:</h2>
+<h4>Si el verdadero volumen medio de los bidones fuera de 10,2 litros, ¿cuál sería la probabilidad de que la ingeniera, que obviamente no conoce este dato, cometa un error de tipo II? Para responder, agregue al gráfico anterior la verdadera distribución muestral de las medias y marquen (con otro color) la zona correspondiente a la probabilidad solicitada, para luego, basándose en este gráfico, calcular el área correspondiente. También hay ejemplos de este procedimiento en la lectura sobre poder estadístico.</h4>
+
+<h5>Un error de tipo II ocurre cuando se rechaza la hipótesis alternativa cuando esta es verdadera, en otras palabras, se acepta la hipótesis nula cuando esta es falsa, para obtener la probabilidad, hay que calcular el área debajo de la curva normal que se genera tomando 10.2 como la media verdadera (o hipótesis alternativa) y dentro del intervalo de confianza, ya que al tomar la suposición de que la hipótesis alternativa es verdadera, la hipótesis nula es falsa, y el área dentro del intervalo de confianza es aceptar esa hipótesis nula.</h5>
+```{r}
+mu_01 <- 10.2  # Hipótesis nula (media verdadera es de 10.2)
+
+# Distribución normal asumiendo que la hipótesis nula es verdadera
+y1 <- dnorm(x, mean = mu_01, sd = errorEstándar)
+
+# Cálculo del área de error tipo II (probabilidad de no rechazar H0 cuando H1 es verdadera)
+errorTipoII <- pnorm(limiteSup, mean = mu_01, sd = errorEstándar) - pnorm(limiteInf, mean = mu_01, sd = errorEstándar)
+
+
+df1 <- data.frame(x = x, y = y1)
+
+# Graficar las distribuciones
+plot_H1 <- ggplot() +
+  # Distribución bajo mu_0 (media = 10)
+  geom_line(data = df, aes(x = x, y = y), color = "blue", size = 1) +
+  # Distribución bajo mu_01 (media = 10.2)
+  geom_line(data = df1, aes(x = x, y = y), color = "green", size = 1) +
+  # Áreas correspondientes al error tipo II (H1)
+  geom_area(data = subset(df1, x >= limiteInf & x <= limiteSup), aes(x, y), fill = "yellow", alpha = 0.5) +
+  # Líneas que representan los límites
+  geom_vline(xintercept = limiteInf, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = limiteSup, linetype = "dashed", color = "red") +
+  ggtitle("Distribución Muestral bajo H0, H1 y Error Tipo II") +
+  xlab("Media muestral") + ylab("Densidad de probabilidad") +
+  theme_minimal()
+
+# Mostrar el gráfico
+print(plot_H1)
+
+# Mostrar la probabilidad de error tipo II
+cat(sprintf("Probabilidad de error tipo II: %.4f", errorTipoII, errorTipoII * 100))
+```
+<h3>Respuesta:</h3>
+<h5>La probabilidad de cometer el error tipo II es de un 0.3155, en otras palabras, hay aproximadamente un 32% de aceptar la hipótesis nula cuando esta es falsa, bajo la suposición de que la media verdadera es 10.2.</h5>
+
+<br></br>
+<h2>Pregunta 3:</h2>
+<h4>Como no se conoce el verdadero volumen medio, genere un gráfico del poder estadístico con las condiciones anteriores, pero suponiendo que el verdadero volumen medio podría variar de 9,5 a 10,5 litros. Hay un ejemplo de este tipo de gráfico en la lectura sobre poder estadístico.</h4>
+
+<h5>Para la creación del gráfico, se utilizó como base solamente, un gráfico que se encuentra de ejemplo en la lectura 4 del ramo.</h5>
+```{r}
+# Datos sobre el Tamaño de efecto
+n <- 50
+alfa <- 0.05
+media_nula <- 10
+sigma <- 1
+
+# Cálculo del poder
+medias_verdaderas <- seq (9.5 , 10.5 , 0.01)
+deltas <- medias_verdaderas - media_nula
+deltas <- round(deltas, 2)
+deltas_normalizados <- deltas / sigma
+
+f_pzb <- function ( x ) pwr.norm.test (x , n = n , sig.level = alfa ,alternative = "two.sided") [["power"]]
+poder_bilat <- sapply ( deltas_normalizados , f_pzb )
+df<-data.frame(deltas_normalizados,poder_bilat)
+#(df, x="deltas_normalizados" , y="poder_bilat", group = 1, color= "black")
+
+plot(df$deltas_normalizados,df$poder_bilat,type = "b", main = "Poder v/s tamaño",
+     ylab = "Poder", xlab = "Tamaño de efecto")
+```
+<h3>Respuesta:</h3>
+<h5>Desde el grafico anterior se puede concluir que a mayor tamaño de efecto, mayor es el poder estadistico presente.</h5>
+
+<br></br>
+<h2>Pregunta 4:</h2>
+<h4>Considerando un volumen medio de 10 litros, ¿cuántos bidones deberían revisarse para conseguir un poder estadístico de 0,75 y un nivel de significación de 0,05?</h4>
+
+<h5>Teniendo en cuenta se tiene el volumen medio de 10 litros, se utilizara la
+prueba Z para obtener el tamaño de la muestra:
+
+h = 10.2-10/1 (utilizando la media de la pregunta 2)
+
+n = NULL (Tamaño de muestra buscado).
+
+sig.level = 0.05.
+
+power = 0.75.
+
+alternative = "two.sided" debido a que se busca detectar si existe una desviacion en el cumplimiento del volumen requerido de ambas maquinas.</h5>
+
+```{r}
+# POTENCIA DE LA PRUEBA DE LA DIFERENCIA DE DOS PROPORCIONES
+size<-pwr.norm.test(d=10.2-10/1 , n=NULL , sig.level=0.05 , power=0.75, alternative = "two.sided")
+size<- print(size)
+```
+<h3>Respuesta:</h3>
+<h5>Teniendo en cuenta el resultado que mostró la prueba Z, se concluye que se necesitan muestras de al menos 173 instancias para conseguir el nivel de significancia y el poder estadistico deseados.</h5>
+
+<br></br>
+<h2>Pregunta 5:</h2>
+
+<h4>¿Alcanzaría esta muestra para detectar la diferencia que la ingeniera sospecha que existe entre las dos máquinas de la planta con al menos las mismas probabilidades de cometer errores?</h4>
+
+<h5>Debido a que ahora se busca encontrar el tamaño de la muestra necesario para detectar la diferencia entre ambas maquinas, se debe utilizar un test para 2 probabilidades con muestras del mismo tamaño.
+Por lo tanto se usara la funcion pwr.2p.test() con las siguientes variables:
+
+h = ES.h(0.9,0.96) (tamaño de efecto medido con h de Cohen en base a las proporciones).
+
+n = NULL (Tamaño de muestra buscado).
+
+sig.level = 0.05.
+
+power = 0.75.
+
+alternative = "two.sided" debido a que se busca detectar si existe una desviacion en el cumplimiento del volumen requerido de ambas maquinas.
+
+</h5>
+```{r}
+# POTENCIA DE LA PRUEBA DE LA DIFERENCIA DE DOS PROPORCIONES
+size<-pwr.2p.test(h=ES.h(0.90,0.96), n=NULL , sig.level=0.05 , power=0.75, alternative = "two.sided")
+print(size)
+```
+<h3>Respuesta:</h3>
+<h5>Para concluir, el tamaño de muestra de 100 anteriormente propuesto, no es suficiente para detectar la diferencia entre las 2 maquinas con el alfa y beta indicados, ya que para lograrlo se debe de utilizar una muestra de al menos 239 por maquina.</h5>

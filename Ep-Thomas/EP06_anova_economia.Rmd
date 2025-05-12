@@ -1,0 +1,186 @@
+---
+title: "EI-EP06-respuesta-equipo-5"
+author: "Equipo 5"
+date: "2025-04-25"
+output: html_document
+---
+
+# Actividades
+
+Un equipo de investigadores del área de interacción humano-información está estudiando si el área temática y el nivel de dificultad del problema de información influyen en el tiempo (en segundos) que toma un usuario en formular una consulta de búsqueda para resolver dicho problema. Para ello, han reclutado a un grupo de participantes voluntarios, asignados aleatoriamente a distintos grupos. Cada participante debe resolver tres problemas de información con diferentes niveles de dificultad: baja, media y alta.
+
+En el contexto de este estudio, realizaremos las siguientes actividades:
+
+1. Copiar el enunciado del problema asignado como comentario de un script R.
+
+2. Obtener los datos, disponibles en el archivo "EP06 Datos.csv", desde el directorio compartido correspondiente.
+
+3. Familiarizarse con los datos entregados, y enunciar las hipótesis nula y alternativa para el procedimiento ANOVA.
+
+4. Analizar si se cumplen las condiciones para usar un procedimiento ANOVA y agregar código al script R para verificarlo.
+
+5. Independiente del resultado anterior, aplicar una prueba ANOVA ómnibus a los datos y entregar una conclusión usando un nivel de significación adecuado.
+
+6. Determinar si corresponde o no aplicar un análisis post-hoc, justificando adecuadamente la opción escogida. Independiente del resultado anterior, aplicar un análisis post-hoc pertinente y comentar los resultados obtenidos.
+
+7. Redactar la respuesta a la pregunta planteada (comentario) en base a los resultados del análisis realizado.
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(ez)
+library(DescTools)
+library(ggpubr)
+
+
+```
+
+# Pregunta 
+
+¿Existen diferencias en el tiempo que tardan los usuarios en formular consultas para problemas con diferente nivel de dificultad en el área de economía?
+
+### Desarrollo de actividades para resolver la pregunta:
+
+1). Obtencion de datos e hipótesis a contrastar:
+
+
+```{r}
+# Leer el archivo CSV (ajusta el nombre o la ruta si es necesario)
+datos <- read.csv("EP06 Datos.csv", sep = ",", header = TRUE)
+
+# Verificar estructura
+str(datos)
+
+
+```
+
+- **Hipótesis nula (H₀): No hay diferencias significativas en el tiempo promedio que tardan los usuarios en formular consultas según el nivel de dificultad del problema .(las medias son iguales).**
+
+- **Hipótesis alternativa (H₁): Al menos un nivel de dificultad presenta un tiempo promedio de consulta distinto a los otros.**
+
+
+2). Verificación de condiciones para usar ANOVA:
+
+Para poder utilizar el test ANOVA de medidas repetidas se debe cumplir con las siguientes condiciones:
+
+1. Variable dependiente cuantitativa en escala de intervalos o razón. La cual si se cumple, porque el tiempo es una medida continua y en escala de razón (más estricta que intervalos).
+
+2. Independencia de las observaciones dentro de cada caso. Sí se cumple, ya que los datos entre personas distintas son independientes.
+
+3. Normalidad de la distribución en cada condición (evaluada con gráficos Q-Q). Se puede obserbar que la distribución de los datos es aproximadamente normal. (faltara su shapiro?  )
+
+
+
+```{r}
+# Filtrar solo los datos del área de Economía
+df_economia <- datos %>%
+  filter(area == "Economía")
+
+# Asegurarse de que las variables son factores
+df_economia$dificultad <- as.factor(df_economia$dificultad)
+df_economia$id <- as.factor(df_economia$id)
+
+# Generar gráfico Q-Q por nivel de dificultad
+ggqqplot(df_economia,
+         x = "tiempo",
+         facet.by = "dificultad",
+         color = "dificultad",
+         title = "Gráficos Q-Q por nivel de dificultad (área Economía)") +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+
+```
+
+
+4. Esfericidad: Esto es que las varianzas de las diferencias entre pares de condiciones deben de ser iguales. Se evalúa con la prueba de Mauchly: Se usara ezAnova para verificar esta condicion con la prueba de Mauchly. El resultado de la prueba arrojó un p-value de aproximadamente 0.11, el cual es mayor al nivel de significancia de 0.05, por lo tanto, no se rechaza la hipótesis de esfericidad. Con esto se concluye que la condición se cumple y no es necesario aplicar correcciones.
+
+
+3). Prueba ANOVA:
+
+Se ha utilizado la función ezANOVA() para analizar los tiempos que tardan los usuarios en formular consultas ante problemas de diferente nivel de dificultad (baja, media y alta) en el área de economía.
+
+Al observar los resultados del análisis, se obtiene un valor de F = 1.34 con un p-valor = 0.262, lo cual no es estadísticamente significativo (ya que es mayor a 0.05). Esto indica que no existen diferencias significativas en los tiempos de formulación de consultas entre los niveles de dificultad evaluados.
+
+Además, el estadístico ges = 0.0046 indica un tamaño del efecto muy pequeño, lo que sugiere que la variabilidad explicada por el nivel de dificultad es mínima.
+
+Por otro lado, la prueba de esfericidad de Mauchly tiene un p-valor = 0.11, lo cual es mayor a 0.05, por lo tanto, se cumple la condición de esfericidad y no es necesario aplicar correcciones. Aun así, los valores corregidos por Greenhouse-Geisser y Huynh-Feldt también entregan resultados no significativos, reafirmando la conclusión.
+
+**Código:**
+
+```{r}
+# Aplicar ezANOVA para muestras correlacionadas
+anova_resultado <- ezANOVA(
+  data = df_economia,
+  dv = tiempo,
+  wid = id,
+  within = dificultad,
+  return_aov = TRUE
+)
+
+# Mostrar resultado
+print(anova_resultado)
+
+
+```
+
+
+4). Analisis Post-hoc:
+
+En este caso, aunque el resultado de la prueba ANOVA no fue estadísticamente significativo (p > 0.05), se realiza el análisis post-hoc con fines académicos, para explorar posibles diferencias y ejercitar la metodología. 
+
+Para identificar entre qué pares se presentan las diferencias, se utilizó la prueba post-hoc de Scheffé. Este método, es más conservador, pero permite realizar comparaciones múltiples de manera robusta.
+
+**Código:**
+
+```{r}
+# Cargar librerías necesarias
+library(nlme)
+library(emmeans)
+
+# Crear el modelo lineal mixto
+modelo_mixto <- lme(tiempo ~ dificultad, data = df_economia, random = ~1|id)
+
+# Estimar medias marginales
+medias_marg <- emmeans(modelo_mixto, "dificultad")
+
+# Crear los contrastes para la prueba de Scheffé
+contrastes <- list(
+  "Baja vs Media" = c(-1, 1, 0),
+  "Baja vs Alta"  = c(-1, 0, 1),
+  "Media vs Alta" = c(0, -1, 1)
+)
+
+# Realizar y mostrar el procedimiento post-hoc de Scheffé
+scheffe <- contrast(medias_marg, method = contrastes, adjust = "scheffe")
+
+print(scheffe, infer = TRUE, level = 0.95)
+```
+
+Resultados del test de Scheffé:
+
+Las comparaciones por pares entre los niveles de dificultad no mostraron diferencias estadísticamente significativas, ya que todas las comparaciones tienen p-valores mayores a 0.05:
+
+- Baja vs Media: diferencia de -0.36 segundos, con p = 0.896. No hay diferencia significativa en el tiempo de formulación entre estos niveles de dificultad.
+
+- Baja vs Alta: diferencia de 0.87 segundos, con p = 0.518. Tampoco se observa una diferencia estadísticamente significativa.
+
+- Media vs Alta: diferencia de 1.23 segundos, con p = 0.272. Aunque esta diferencia es la más amplia de las tres, sigue sin ser significativa.
+
+# Conclusión:
+
+Con un 95% de confianza, no se encontraron diferencias significativas en el tiempo que tardan los usuarios en formular consultas según el nivel de dificultad del problema (baja, media o alta) dentro del área de economía. Esto sugiere que el grado de dificultad del problema no parece influir de manera importante en el tiempo de respuesta de los participantes, al menos dentro del contexto evaluado.
+
+
